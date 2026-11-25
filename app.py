@@ -19,9 +19,10 @@ from groq import Groq
 # automatically tries the next one, so the app keeps working.
 # Both are "production" models on Groq (the stable kind).
 # List of models: https://console.groq.com/docs/models
+# (Groq shut down the old Llama models in Aug 2026, so we use these.)
 MODEL_OPTIONS = [
-    "llama-3.3-70b-versatile",   # main model: smart and good at following rules
-    "llama-3.1-8b-instant",      # backup model: smaller and very fast
+    "openai/gpt-oss-120b",   # main model: big, smart, good at following rules
+    "openai/gpt-oss-20b",    # backup model: smaller and faster
 ]
 
 # TEMPERATURE = how "creative" or "random" the answers are (0 to 2).
@@ -32,10 +33,15 @@ MODEL_OPTIONS = [
 TEMPERATURE = 0.3
 
 # MAX TOKENS = the longest reply the bot is allowed to write.
-# 1 token is about 3/4 of a word, so 600 tokens is about 450 words.
+# 1 token is about 3/4 of a word. These models "think" a little before
+# answering, and that thinking also counts as tokens. So we allow 1000:
+# a short think + an answer of about 400-500 words.
 # That is enough for clear step-by-step help, but stops long essays.
-# Shorter replies are also faster and use less of the free Groq limit.
-MAX_TOKENS = 600
+MAX_TOKENS = 1000
+
+# REASONING EFFORT = how long the model thinks before answering.
+# "low" is enough for simple banking help, and it keeps replies fast.
+REASONING_EFFORT = "low"
 
 # How many past messages we send back to the AI each time.
 # The bot "remembers" by re-reading these. We cap it at 20 so a
@@ -120,6 +126,8 @@ def ask_bot(client, chat_history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages = messages + chat_history[-HISTORY_LIMIT:]
 
+    last_error = ""   # we save the reason if a model fails
+
     # Try each model in the list, one by one
     for model_name in MODEL_OPTIONS:
         try:
@@ -128,11 +136,14 @@ def ask_bot(client, chat_history):
                 messages=messages,
                 temperature=TEMPERATURE,
                 max_tokens=MAX_TOKENS,
+                reasoning_effort=REASONING_EFFORT,
+                include_reasoning=False,   # only send back the answer, not the thinking
             )
             return response.choices[0].message.content
 
         # This model is retired or not found, so try the next model
-        except (groq.NotFoundError, groq.BadRequestError):
+        except (groq.NotFoundError, groq.BadRequestError) as error:
+            last_error = error.message
             continue
 
         # Other problems: show a polite message instead of crashing
@@ -148,7 +159,7 @@ def ask_bot(client, chat_history):
             return "⚠️ Something unexpected went wrong. Please try again."
 
     # We only reach here if every model in the list failed
-    return "⚠️ None of the AI models are available right now. Please update MODEL_OPTIONS in app.py."
+    return f"⚠️ None of the AI models worked. Reason: {last_error}"
 
 
 # ------------------------------------------------------------

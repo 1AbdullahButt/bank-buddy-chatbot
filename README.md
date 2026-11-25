@@ -35,9 +35,10 @@ The full prompt is in `app.py` (`SYSTEM_PROMPT`).
 
 | Setting | Value | Why |
 |---|---|---|
-| **Models** | `llama-3.3-70b-versatile`, backup `llama-3.1-8b-instant` | Both are stable "production" models on Groq. If the main model is ever retired, the app automatically switches to the backup, so it keeps working. |
+| **Models** | `openai/gpt-oss-120b`, backup `openai/gpt-oss-20b` | Both are stable "production" models on Groq. If the main model is ever retired, the app automatically switches to the backup, so it keeps working. |
 | **Temperature** | `0.3` | Low temperature gives accurate, consistent answers. For money problems we want the same correct steps every time, not creative ones. It is not 0, so replies still sound natural and friendly. |
-| **Max tokens** | `600` | About 450 words: enough for a clear step-by-step answer, but it stops very long replies. Short replies are faster and use less of the free Groq limit. |
+| **Max tokens** | `1000` | These models think briefly before answering, and that thinking counts as tokens too. 1000 covers a short think plus an answer of about 400-500 words: enough for clear step-by-step help, but it stops very long replies. |
+| **Reasoning effort** | `low` | How long the model thinks before answering. Low is enough for everyday banking help and keeps replies fast. |
 | **History limit** | last 20 messages | The bot remembers the conversation, but very long chats don't grow too big for the model. |
 
 The notebook includes a test that compares temperature `0.3` with `1.2` on the same question.
